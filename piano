@@ -1,0 +1,113 @@
+
+<html lang="tr"><head><script src="/_sdk/telemetry_sdk.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Piyano Oyunu</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'DM Sans', sans-serif; }
+    .piano-scroll {
+      overflow-x: auto;
+      padding: 20px 0;
+    }
+    .piano-wrapper {
+      position: relative;
+      display: flex;
+      height: 240px;
+    }
+    .white-key {
+      width: 36px; height: 220px;
+      background: linear-gradient(180deg, #f8f8f8 0%, #fff 10%, #e8e8e8 100%);
+      border: 1px solid #999;
+      border-radius: 0 0 5px 5px;
+      cursor: pointer;
+      transition: background 0.05s;
+      flex-shrink: 0;
+    }
+    .white-key.active {
+      background: linear-gradient(180deg, #ddd 0%, #ccc 100%);
+      transform: translateY(2px);
+    }
+    .black-key {
+      width: 24px; height: 140px;
+      background: linear-gradient(180deg, #333 0%, #000 100%);
+      border-radius: 0 0 4px 4px;
+      cursor: pointer;
+      position: absolute;
+      z-index: 10;
+      transition: background 0.05s;
+    }
+    .black-key.active {
+      background: linear-gradient(180deg, #555 0%, #222 100%);
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" type="text/javascript"></script>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/resizing_sdk.js" type="text/javascript"></script>
+ </head>
+ <body data-template-id="__page-root" class="min-h-screen flex flex-col items-center justify-center" style="background: linear-gradient(rgb(26, 26, 46), rgb(22, 33, 62));">
+  <header class="mb-6 text-center">
+   <h1 data-template-id="title" class="canva-text text-4xl font-bold mb-2" style="color: rgb(255, 255, 255); font-weight: 700; font-style: normal; font-size: 32px;">🎹 Piyano Oyunu</h1>
+   <p data-template-id="hint" class="canva-text text-sm opacity-70" style="color: rgb(203, 213, 225); font-weight: 400; font-style: normal; font-size: 16px;">88 tuş — kaydırarak tüm tuşlara erişin, tıklayarak çalın</p>
+  </header>
+  <main class="w-full">
+   <div class="piano-scroll">
+    <div class="piano-wrapper" id="piano"></div>
+   </div>
+  </main>
+  <script src="/_sdk/editing_sdk.js"></script>
+  <script>
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const WHITE_W = 36;
+
+    // Build 88 keys: A0 (midi 21) to C8 (midi 108)
+    // Pattern of black keys in an octave (relative to C): 1,3,6,8,10
+    const blackInOctave = new Set([1,3,6,8,10]);
+
+    function midiToFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
+    function isBlack(midi) { return blackInOctave.has(midi % 12); }
+
+    function playNote(freq) {
+      audioCtx.resume();
+      const now = audioCtx.currentTime;
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc1.type = 'triangle'; osc1.frequency.value = freq;
+      osc2.type = 'sine'; osc2.frequency.value = freq * 2;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.4, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+      osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination);
+      osc1.start(now); osc2.start(now); osc1.stop(now + 1.2); osc2.stop(now + 1.2);
+    }
+
+    const piano = document.getElementById('piano');
+    let whiteCount = 0;
+
+    for (let midi = 21; midi <= 108; midi++) {
+      const freq = midiToFreq(midi);
+      if (!isBlack(midi)) {
+        const el = document.createElement('div');
+        el.className = 'white-key';
+        piano.appendChild(el);
+        el.addEventListener('pointerdown', e => { e.preventDefault(); playNote(freq); el.classList.add('active'); });
+        el.addEventListener('pointerup', () => el.classList.remove('active'));
+        el.addEventListener('pointerleave', () => el.classList.remove('active'));
+        whiteCount++;
+      } else {
+        const el = document.createElement('div');
+        el.className = 'black-key';
+        el.style.left = (whiteCount * WHITE_W - 13) + 'px';
+        piano.appendChild(el);
+        el.addEventListener('pointerdown', e => { e.preventDefault(); playNote(freq); el.classList.add('active'); });
+        el.addEventListener('pointerup', () => el.classList.remove('active'));
+        el.addEventListener('pointerleave', () => el.classList.remove('active'));
+      }
+    }
+
+    piano.style.width = (whiteCount * WHITE_W) + 'px';
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0fe6a5b05e923a1',t:'MTc4MjE2NDQ2OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+</body>
